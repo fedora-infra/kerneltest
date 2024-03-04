@@ -1,0 +1,14 @@
+[Unit]
+Description=kerneltest
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=FLASK_DEBUG=1
+Environment=PYTHONUNBUFFERED=1
+User=vagrant
+WorkingDirectory=/home/vagrant/kerneltest
+ExecStart=python runserver.py --host 0.0.0.0
+
+[Install]
+WantedBy=multi-user.target

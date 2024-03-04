@@ -5,14 +5,14 @@ import logging
 import logging.handlers
 import os
 import sys
-import urlparse
+import urllib.parse
 from functools import wraps
 
 import flask
 import wtforms as wtf
-from flask.ext.fas_openid import FAS
-from flask.ext import wtf as flask_wtf
-from flask.ext.wtf import file as wtf_file
+from flask_fas_openid import FAS
+import flask_wtf
+from flask_wtf.file import FileRequired
 from sqlalchemy.exc import SQLAlchemyError
 
 import kerneltest.dbtools as dbtools
@@ -182,9 +182,9 @@ def is_safe_url(target):
     """ Checks that the target url is safe and sending to the current
     website not some other malicious one.
     """
-    ref_url = urlparse.urlparse(flask.request.host_url)
-    test_url = urlparse.urlparse(
-        urlparse.urljoin(flask.request.host_url, target))
+    ref_url = urllib.parse.urlparse(flask.request.host_url)
+    test_url = urllib.parse.urlparse(
+        urllib.parse.urljoin(flask.request.host_url, target))
     return test_url.scheme in ('http', 'https') and \
         ref_url.netloc == test_url.netloc
 
@@ -563,28 +563,28 @@ def admin_edit_release(relnum):
 
 class UploadForm(flask_wtf.Form):
     ''' Form used to upload the results of kernel tests. '''
-    username = wtf.TextField("Username", default='anon')
-    test_result = wtf_file.FileField(
-        "Result file", validators=[wtf_file.file_required()])
+    username = wtf.StringField("Username", default='anon')
+    test_result = wtf.FileField(
+        "Result file", validators=[FileRequired()])
 
 
 class ApiUploadForm(flask_wtf.Form):
     ''' Form used to upload the results of kernel tests via the api. '''
-    username = wtf.TextField("Username", default='anon')
-    api_token = wtf.TextField(
-        "API token", validators=[wtf.validators.Required()])
-    test_result = wtf_file.FileField(
-        "Result file", validators=[wtf_file.file_required()])
+    username = wtf.StringField("Username", default='anon')
+    api_token = wtf.StringField(
+        "API token", validators=[wtf.validators.DataRequired()])
+    test_result = wtf.FileField(
+        "Result file", validators=[FileRequired()])
 
 
 class ReleaseForm(flask_wtf.Form):
     ''' Form used to create or edit release in the database. '''
     releasenum = wtf.IntegerField(
         "Release number <span class='error'>*</span>",
-        validators=[wtf.validators.Required()])
+        validators=[wtf.validators.DataRequired()])
     support = wtf.SelectField(
         "Support <span class='error'>*</span>",
-        validators=[wtf.validators.Required()],
+        validators=[wtf.validators.DataRequired()],
         choices=[
             ('RAWHIDE', 'Rawhide'),
             ('TEST', 'Test'),
