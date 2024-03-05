@@ -10,10 +10,14 @@ from functools import wraps
 
 import flask
 import wtforms as wtf
-from flask_fas_openid import FAS
 import flask_wtf
 from flask_wtf.file import FileRequired
 from sqlalchemy.exc import SQLAlchemyError
+import six
+import munch
+
+
+from flask_oidc import OpenIDConnect
 
 import kerneltest.dbtools as dbtools
 
@@ -25,8 +29,8 @@ if 'KERNELTEST_CONFIG' in os.environ:  # pragma: no cover
     APP.config.from_envvar('KERNELTEST_CONFIG')
 
 # Set up FAS extension
-FAS = FAS(APP)
 
+OIDC = OpenIDConnect(APP, credentials_store=flask.session)
 
 # Set up the logger
 ## Send emails for big exception
@@ -64,6 +68,27 @@ APP.wsgi_app = kerneltest.proxy.ReverseProxied(APP.wsgi_app)
 
 SESSION = dbtools.create_session(APP.config['DB_URL'])
 
+@APP.before_request
+def set_session():  # pragma: no-cover
+    """ Set the flask session as permanent. """
+    flask.session.permanent = True
+
+    if OIDC.user_loggedin:
+        if not hasattr(flask.session, "fas_user") or not flask.session.fas_user:
+            flask.session.fas_user = munch.Munch(
+                {
+                    "username": OIDC.user_getfield("nickname"),
+                    "email": OIDC.user_getfield("email") or "",
+                    "timezone": OIDC.user_getfield("zoneinfo"),
+                    "groups": OIDC.user_getfield("groups"),
+                    "cla_done": "signed_fpca" in (OIDC.user_getfield("groups") or []),
+                }
+            )
+        flask.g.fas_user = flask.session.fas_user
+
+    else:
+        flask.session.fas_user = None
+        flask.g.fas_user = None
 
 ## Exception generated when uploading the results into the database.
 
@@ -77,9 +102,17 @@ class InvalidInputException(Exception):
 
 def parseresults(log):
     ''' Parse the result of the kernel tests. '''
+    testdate = None
+    testset = None
+    testkver = None
+    testrel = None
+    testresult = None
+    failedtests = None
     for line in log:
+        line = line.decode()
         if "Date: " in line:
             testdate = line.replace("Date: ", "", 1).rstrip('\n')
+            APP.logger.warn(testdate)
         elif "Test set: " in line:
             testset = line.replace("Test set: ", "", 1).rstrip('\n')
         elif "Kernel: " in line:
@@ -105,10 +138,10 @@ def upload_results(test_result, username, authenticated=False):
     logdir = APP.config.get('LOG_DIR', 'logs')
     if not os.path.exists(logdir) and not os.path.isdir(logdir):
         os.mkdir(logdir)
-
     try:
         (testdate, testset, testkver, testrel,
          testresult, failedtests) = parseresults(test_result)
+        APP.logger.error(testkver)
     except Exception as err:
         APP.logger.debug(err)
         raise InvalidInputException('Could not parse these results')
@@ -131,7 +164,7 @@ def upload_results(test_result, username, authenticated=False):
         kver=testkver,
         fver=fver,
         testarch=testarch,
-        testrel=testrel.decode('utf-8'),
+        testrel=testrel,
         testresult=testresult,
         failedtests=failedtests,
         authenticated=authenticated,
@@ -171,11 +204,23 @@ def is_admin(user):
         return False
 
     admins = APP.config['ADMIN_GROUP']
-    if isinstance(admins, basestring):
+    if isinstance(admins, six.string_types):
         admins = [admins]
     admins = set(admins)
 
     return len(admins.intersection(set(user.groups))) > 0
+
+def safe_redirect_back(next=None, fallback=("index", {})):
+    """ Safely redirect the user to its previous page. """
+    targets = []
+    if next:  # pragma: no cover
+        targets.append(next)
+    if "next" in flask.request.args and flask.request.args["next"]:  # pragma: no cover
+        targets.append(flask.request.args["next"])
+    targets.append(flask.url_for(fallback[0], **fallback[1]))
+    for target in targets:
+        if is_safe_url(target):
+            return flask.redirect(target)
 
 
 def is_safe_url(target):
@@ -188,19 +233,6 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and \
         ref_url.netloc == test_url.netloc
 
-
-def fas_login_required(function):
-    ''' Flask decorator to ensure that the user is logged in against FAS.
-    '''
-    @wraps(function)
-    def decorated_function(*args, **kwargs):
-        ''' Do the actual work of the decorator. '''
-        if not hasattr(flask.g, 'fas_user') or flask.g.fas_user is None:
-            return flask.redirect(flask.url_for(
-                'login', next=flask.request.url))
-
-        return function(*args, **kwargs)
-    return decorated_function
 
 
 def admin_required(function):
@@ -325,7 +357,7 @@ def stats():
 
 
 @APP.route('/upload/', methods=['GET', 'POST'])
-@fas_login_required
+@OIDC.require_login
 def upload():
     ''' Display the page where new results can be uploaded. '''
     form = UploadForm()
@@ -346,7 +378,7 @@ def upload():
             flask.flash('Upload successful!')
         except InvalidInputException as err:
             APP.logger.debug(err)
-            flask.flash(err.message)
+            flask.flash(str(err))
             return flask.redirect(flask.url_for('upload'))
         except SQLAlchemyError as err:
             APP.logger.exception(err)
@@ -462,29 +494,23 @@ def upload_anonymous():
 
 
 @APP.route('/login', methods=['GET', 'POST'])
+@OIDC.require_login
 def login():
     ''' Login mechanism for this application.
     '''
-    return_point = flask.url_for('index')
-    if 'next' in flask.request.args:
-        if is_safe_url(flask.request.args['next']):
-            return_point = flask.request.args['next']
+    next_url = None
+    if "next" in flask.request.args:
+        if is_safe_url(flask.request.args["next"]):
+            next_url = flask.request.args["next"]
 
-    # Avoid infinite loop
-    if return_point == flask.url_for('login'):
-        next_url = flask.url_for('index')
+    if not next_url or next_url == flask.url_for(".login"):
+        next_url = flask.url_for(".index")
 
-    if hasattr(flask.g, 'fas_user') and flask.g.fas_user is not None:
-        return flask.redirect(return_point)
-    else:
-        admins = APP.config['ADMIN_GROUP']
-        if isinstance(admins, basestring):
-            admins = [admins]
-        return FAS.login(
-            return_url=return_point, groups=admins)
+    return safe_redirect_back(next_url)
 
 
 @APP.route('/logout')
+@OIDC.require_login
 def logout():
     ''' Log out if the user is logged in other do nothing.
     Return to the index page at the end.
@@ -497,7 +523,7 @@ def logout():
     if next_url == flask.url_for('logout'):
         next_url = flask.url_for('index')
     if hasattr(flask.g, 'fas_user') and flask.g.fas_user is not None:
-        FAS.logout()
+        OIDC.logout()
         flask.flash("You are no longer logged-in")
     return flask.redirect(next_url)
 
@@ -561,14 +587,14 @@ def admin_edit_release(relnum):
 
 ## Form used to upload new results
 
-class UploadForm(flask_wtf.Form):
+class UploadForm(flask_wtf.FlaskForm):
     ''' Form used to upload the results of kernel tests. '''
     username = wtf.StringField("Username", default='anon')
     test_result = wtf.FileField(
         "Result file", validators=[FileRequired()])
 
 
-class ApiUploadForm(flask_wtf.Form):
+class ApiUploadForm(flask_wtf.FlaskForm):
     ''' Form used to upload the results of kernel tests via the api. '''
     username = wtf.StringField("Username", default='anon')
     api_token = wtf.StringField(
@@ -577,7 +603,7 @@ class ApiUploadForm(flask_wtf.Form):
         "Result file", validators=[FileRequired()])
 
 
-class ReleaseForm(flask_wtf.Form):
+class ReleaseForm(flask_wtf.FlaskForm):
     ''' Form used to create or edit release in the database. '''
     releasenum = wtf.IntegerField(
         "Release number <span class='error'>*</span>",

@@ -6,9 +6,10 @@ Wants=network-online.target
 [Service]
 Environment=FLASK_DEBUG=1
 Environment=PYTHONUNBUFFERED=1
-User=vagrant
+Environment=KERNELTEST_CONFIG=/home/vagrant/kerneltest.cfg
+User=root
 WorkingDirectory=/home/vagrant/kerneltest
-ExecStart=python runserver.py --host 0.0.0.0
+ExecStart=python runserver.py --port 443 --host "0.0.0.0" --cert "/etc/pki/tls/certs/server.pem" --key "/etc/pki/tls/private/server.key"
 
 [Install]
 WantedBy=multi-user.target
