@@ -12,6 +12,10 @@
       - python-openid-cla
       - python-alembic
       - python-toml
+      - python-flask-oidc
+      - python-pip
+      - python-devel
+
     state: present
 
 - name: Create the sqlite database
@@ -21,6 +25,14 @@
   args:
     chdir: /home/vagrant/kerneltest
     creates: /var/tmp/kernel-test_dev.sqlite
+
+- name: copy the config file
+  copy:
+    src: kerneltest.cfg
+    dest: /home/vagrant/kerneltest.cfg
+    mode: 0644
+    owner: vagrant
+    group: vagrant
 
 - name: Install the systemd unit files for kerneltest service
   copy:

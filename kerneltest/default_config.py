@@ -25,3 +25,13 @@ ALLOWED_MIMETYPES = ['text/plain']
 
 # Restrict the size of content uploaded, this is 25Kb
 MAX_CONTENT_LENGTH = 1024 * 25
+
+OIDC_CLIENT_SECRETS = 'client_secrets.json'
+OIDC_SCOPES = [
+    "openid",
+    "email",
+    "profile",
+    "https://id.fedoraproject.org/scope/groups",
+    "https://id.fedoraproject.org/scope/agreements",
+    "https://id.fedoraproject.org/scope/fas-attributes",
+]
