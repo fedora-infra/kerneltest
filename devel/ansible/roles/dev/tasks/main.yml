@@ -15,16 +15,9 @@
       - python-flask-oidc
       - python-pip
       - python-devel
+      - poetry
 
     state: present
-
-- name: Create the sqlite database
-  command: python createdb.py
-  become: yes
-  become_user: vagrant
-  args:
-    chdir: /home/vagrant/kerneltest
-    creates: /var/tmp/kernel-test_dev.sqlite
 
 - name: copy the config file
   copy:
@@ -33,6 +26,15 @@
     mode: 0644
     owner: vagrant
     group: vagrant
+
+- name: Create the database
+  command: python createdb.py
+  environment:
+    KERNELTEST_CONFIG: /home/vagrant/kerneltest.cfg
+  become: yes
+  become_user: vagrant
+  args:
+    chdir: /home/vagrant/kerneltest
 
 - name: Install the systemd unit files for kerneltest service
   copy:

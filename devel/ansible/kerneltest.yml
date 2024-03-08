@@ -9,4 +9,5 @@
     - ipa-client
     - cert
     - oidc-register
+    - postgres
     - dev
