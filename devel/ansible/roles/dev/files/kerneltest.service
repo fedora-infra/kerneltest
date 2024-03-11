@@ -7,9 +7,11 @@ Wants=network-online.target
 Environment=FLASK_DEBUG=1
 Environment=PYTHONUNBUFFERED=1
 Environment=KERNELTEST_CONFIG=/home/vagrant/kerneltest.cfg
-User=root
-WorkingDirectory=/home/vagrant/kerneltest
-ExecStart=python runserver.py --port 443 --host "0.0.0.0" --cert "/etc/pki/tls/certs/server.pem" --key "/etc/pki/tls/private/server.key"
+Environment=REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+AmbientCapabilities = CAP_NET_BIND_SERVICE
+User=vagrant
+WorkingDirectory=/home/vagrant/kerneltest/kerneltest
+ExecStart=poetry run flask run --port 443 --host "0.0.0.0" --cert "/etc/pki/tls/certs/server.pem" --key "/etc/pki/tls/private/server.key"
 
 [Install]
 WantedBy=multi-user.target
