@@ -1,7 +1,10 @@
 ---
-- name: Install dev packages
+- name: Install packages
   dnf:
     name:
+      - poetry
+      - libpq-devel
+      - gcc
       - python-flask
       - python-flask-wtf
       - python-fedora-flask
@@ -16,8 +19,17 @@
       - python-pip
       - python-devel
       - poetry
+      - libpq-devel
+      - gcc
 
     state: present
+
+- name: install kerneltest with poetry
+  shell: poetry install
+  become: yes
+  become_user: vagrant
+  args:
+    chdir: /home/vagrant/kerneltest/kerneltest
 
 - name: copy the config file
   copy:
@@ -28,7 +40,7 @@
     group: vagrant
 
 - name: Create the database
-  command: python createdb.py
+  command: poetry run python createdb.py
   environment:
     KERNELTEST_CONFIG: /home/vagrant/kerneltest.cfg
   become: yes
