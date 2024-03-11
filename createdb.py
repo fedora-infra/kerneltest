@@ -2,10 +2,6 @@
 
 from __future__ import print_function
 
-## These two lines are needed to run on EL6
-__requires__ = ['SQLAlchemy >= 0.7', 'jinja2 >= 2.4']
-import pkg_resources
-
 from sqlalchemy.exc import SQLAlchemyError
 import kerneltest.app as app
 import kerneltest.dbtools as dbtools
