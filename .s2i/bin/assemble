@@ -16,7 +16,8 @@ pip install poetry
 poetry config virtualenvs.create false
 
 echo "---> Installing application and dependencies ..."
-poetry install --no-dev --extras deploy
+poetry install
 
 # set permissions for any installed artifacts
 fix-permissions /opt/app-root -P
+echo "---> Installing application and dependencies ..."
