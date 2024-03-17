@@ -401,7 +401,7 @@ def upload():
 @APP.route('/upload/autotest', methods=['POST'])
 def upload_autotest():
     ''' Specific endpoint for some clients to upload their results. '''
-    form = ApiUploadForm(csrf_enabled=False)
+    form = ApiUploadForm(meta={'csrf': False})
     httpcode = 200
     error = False
 
