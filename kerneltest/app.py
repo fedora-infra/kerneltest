@@ -18,8 +18,10 @@ import munch
 
 
 from flask_oidc import OpenIDConnect
+from kerneltest_messages import UploadNewV1, ReleaseNewV1, ReleaseEditV1
 
 import kerneltest.dbtools as dbtools
+import kerneltest.messaging as messaging
 
 __version__ = '1.2.1'
 
@@ -174,12 +176,12 @@ def upload_results(test_result, username, authenticated=False):
     SESSION.flush()
 
     if authenticated:
-        dbtools.fedmsg_publish(
-            'upload.new',
-            dict(
+        msg = UploadNewV1(body=dict(
                 agent=username,
                 test=test.to_json(),
             ))
+        
+        messaging.publish(msg)
 
     filename = '%s.log' % test.testid
     test_result.seek(0)
@@ -541,12 +543,12 @@ def admin_new_release():
         form.populate_obj(obj=release)
         SESSION.commit()
 
-        dbtools.fedmsg_publish(
-            'release.new',
-            dict(
+        msg = ReleaseNewV1(body=dict(
                 agent=flask.g.fas_user.username,
                 release=release.to_json(),
             ))
+        messaging.publish(msg)
+
 
         flask.flash('Release "%s" added' % release.releasenum)
         return flask.redirect(flask.url_for('index'))
@@ -569,12 +571,11 @@ def admin_edit_release(relnum):
         form.populate_obj(obj=release)
         SESSION.commit()
 
-        dbtools.fedmsg_publish(
-            'release.edit',
-            dict(
+        msg = ReleaseEditV1(body=dict(
                 agent=flask.g.fas_user.username,
                 release=release.to_json(),
             ))
+        messaging.publish(msg)
 
         flask.flash('Release "%s" updated' % release.releasenum)
         return flask.redirect(flask.url_for('index'))

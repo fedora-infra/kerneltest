@@ -11,21 +11,6 @@ from sqlalchemy.orm import scoped_session
 BASE = declarative_base()
 
 
-def fedmsg_publish(*args, **kwargs):  # pragma: no cover
-    ''' Try to publish a message on the fedmsg bus. '''
-    ## We catch Exception if we want :-p
-    # pylint: disable=W0703
-    ## Ignore message about fedmsg import
-    # pylint: disable=F0401
-    kwargs['modname'] = 'kerneltest'
-    try:
-        import fedmsg
-        fedmsg.publish(*args, **kwargs)
-    except Exception as err:
-        import kerneltest.app
-        kerneltest.app.APP.logger.exception(err)
-
-
 class KernelTest(BASE):
     __tablename__ = 'kerneltest'
     testid = sa.Column(sa.Integer, primary_key=True)
