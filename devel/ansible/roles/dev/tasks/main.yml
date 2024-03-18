@@ -21,6 +21,7 @@
       - poetry
       - libpq-devel
       - gcc
+      - fedora-messaging
 
     state: present
 
@@ -47,6 +48,14 @@
   become_user: vagrant
   args:
     chdir: /home/vagrant/kerneltest
+
+
+- name: configure fedora-messaging to point at tinystage rabbitmq
+  lineinfile:
+    path: /etc/fedora-messaging/config.toml
+    regexp: "amqp_url = \"amqp://\""
+    line: "amqp_url = \"amqp://fedoramessages:fedoramessages@tinystage.tinystage.test\"" # gitleaks:allow
+
 
 - name: Install the systemd unit files for kerneltest service
   copy:
