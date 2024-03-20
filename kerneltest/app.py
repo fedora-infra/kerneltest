@@ -23,7 +23,7 @@ from kerneltest_messages import UploadNewV1, ReleaseNewV1, ReleaseEditV1
 import kerneltest.dbtools as dbtools
 import kerneltest.messaging as messaging
 
-__version__ = '1.2.1'
+__version__ = '1.3.0'
 
 APP = flask.Flask(__name__)
 APP.config.from_object('kerneltest.default_config')
