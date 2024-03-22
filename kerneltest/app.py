@@ -148,6 +148,9 @@ def upload_results(test_result, username, authenticated=False):
         APP.logger.debug(err)
         raise InvalidInputException('Could not parse these results')
 
+    if not testkver:
+        raise InvalidInputException('Could not parse these results')
+
     relarch = testkver.split(".")
     fver = relarch[-2].replace("fc", "", 1)
     testarch = relarch[-1]

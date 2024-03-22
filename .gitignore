@@ -16,3 +16,4 @@ tests/logs/
 logs/
 .vagrant/
 Vagrantfile
+.vscode
