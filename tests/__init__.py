@@ -12,6 +12,8 @@ import pkg_resources
 import unittest
 import sys
 import os
+import time
+import six
 
 from contextlib import contextmanager
 from flask import appcontext_pushed, g
@@ -45,27 +47,50 @@ if os.environ.get('BUILD_ID'):
 class FakeFasUser(object):
     """ Fake FAS user used for the tests. """
     id = 100
-    username = 'pingou'
+    username = "pingou"
     cla_done = True
-    groups = ['packager', 'cla_done']
-    bugzilla_email = 'pingou-at-pingoured.fr'
+    groups = ["packager", "signed_fpca"]
+    email = "pingou@fp.o"
 
 
 @contextmanager
-def user_set(APP, user):
+def user_set(client, user):
     """ Set the provided user as fas_user in the provided application."""
 
-    # Hack used to remove the before_request function set by
-    # flask.ext.fas_openid.FAS which otherwise kills our effort to set a
-    # flask.g.fas_user.
-    APP.before_request_funcs[None] = []
+    with client.session_transaction() as session:
+        session["oidc_auth_token"] = {
+            "token_type": "Bearer",
+            "access_token": "dummy_access_token",
+            "refresh_token": "dummy_refresh_token",
+            "expires_in": "3600",
+            "expires_at": int(time.time()) + 3600,
+        }
+        session["oidc_auth_profile"] = {
+            "nickname": user.username,
+            "email": user.email,
+            "zoneinfo": None,
+            "groups": user.groups,
+        }
+    yield
 
-    def handler(sender, **kwargs):
-        g.fas_user = user
-
-    with appcontext_pushed.connected_to(handler, APP):
-        yield
-
+def message_result(tester=None, testdate='Thu Apr 24 11:48:35 CDT 2014', release="Fedora release 19 (Schrodingers Cat)"):
+    # currently the only differences between the 4 test logs we use is the
+    # date, and release fields. should expand this to make the tests better
+    return {
+                'agent': tester,
+                'test': {
+                    'arch': 'x86_64',
+                    'authenticated': True,
+                    'failed_tests': './default/paxtest',
+                    'fedora_version': '20',
+                    'kernel_version': "3.14.1-200.fc20.x86_64",
+                    'release': release,
+                    'result': 'FAIL',
+                    'testdate': testdate,
+                    'tester': tester,
+                    'testset': 'default',
+                },
+            }
 
 class Modeltests(unittest.TestCase):
     """ Model tests. """
@@ -84,7 +109,6 @@ class Modeltests(unittest.TestCase):
                 os.unlink(dbfile)
         self.session = dbtools.create_session(
             DB_PATH, debug=False, create_table=True)
-        app.APP.before_request(app.FAS._check_session)
 
     # pylint: disable=C0103
     def tearDown(self):

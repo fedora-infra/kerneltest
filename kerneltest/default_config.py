@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 
 # Secret key used to generate the CRSF token, thus very private!
 SECRET_KEY = '<change me before using me in prod>'
@@ -26,7 +27,11 @@ ALLOWED_MIMETYPES = ['text/plain']
 # Restrict the size of content uploaded, this is 25Kb
 MAX_CONTENT_LENGTH = 1024 * 25
 
-OIDC_CLIENT_SECRETS = 'client_secrets.json'
+# obviously, this needs to be changed for deployments
+OIDC_CLIENT_SECRETS = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "../tests", "client_secrets.json"
+)
+
 OIDC_SCOPES = [
     "openid",
     "email",
