@@ -2,11 +2,11 @@
 #
 # Licensed under the terms of the GNU GPL License version 2
 
-from __future__ import print_function
 import os
 import string
 import time
-import thread
+import _thread
+import logging
 
 import fedmsg
 import fedmsg.config
@@ -15,7 +15,7 @@ import fedmsg.meta
 import libvirt
 
 def domainmap(buildrel):
-    rawhide = "fc21"
+    rawhide = "fc41"
     if buildrel == rawhide:
         domain = "Rawhide"
     else:
@@ -43,6 +43,7 @@ def launchdomain(domain):
     print("Domain %s started" % (domain))
  
 if __name__ == '__main__':
+    logging.basicConfig()
     pidfile = open('/var/run/harness.pid', 'w')
     pid = str(os.getpid())
     pidfile.write(pid)
@@ -53,21 +54,22 @@ if __name__ == '__main__':
     fedmsg.meta.make_processors(**config)
 
     for name, endpoint, topic, msg in fedmsg.tail_messages(**config):
-        if "buildsys.build.state.change" in topic:
+        if "buildsys.build.state.change" in topic and msg['msg']['instance'] == 'primary':
             matchedmsg = fedmsg.meta.msg2repr(msg, **config)
-            if "completed" in matchedmsg:
-                if "kernel" in matchedmsg:
-                    objectmsg = fedmsg.meta.msg2subtitle(msg, legacy=False, **config)
-                    package = string.split(objectmsg, ' ')
-                    fcrelease = string.split(package[1], '.')
-                    domain = domainmap(fcrelease[-1])
-                    logfile = open('/var/log/harness.log', 'a')
-                    logfile.write('Testing ' + package[1] + '\n')
-                    logfile.close()
-                    writelatest(domain, package[1])
-                    dom32 = domain + '32'
-                    dom64 = domain + '64'
-                    print("starting domain %s" % (dom32))
-                    thread.start_new(launchdomain, (dom32,))
-                    print("starting domain %s" % (dom64))
-                    thread.start_new(launchdomain, (dom64,))
+            if "completed" in matchedmsg and "kernel-6" in matchedmsg:
+                objectmsg = fedmsg.meta.msg2subtitle(msg, legacy=False, **config)
+                package = objectmsg.split(' ')
+                fcrelease = package[1].split('.')
+                domain = domainmap(fcrelease[-1])
+                logfile = open('/var/log/harness.log', 'a')
+                logfile.write(matchedmsg + '\n')
+                logfile.write('Testing ' + package[1] + '\n')
+                logfile.close()
+                writelatest(domain, package[1])
+                dom32 = domain + 'arm64'
+                dom64 = domain + '64'
+                print(matchedmsg)
+                print("starting domain %s" % (dom32))
+                _thread.start_new(launchdomain, (dom32,))
+                print("starting domain %s" % (dom64))
+                _thread.start_new(launchdomain, (dom64,))
