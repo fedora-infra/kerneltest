@@ -54,6 +54,7 @@ responses = "^0.25.0"
 pytest = ">=7.1.0"
 pytest-cov = ">=3.0.0"
 coverage = "^7.4.4"
+black = "^24.3.0"
 
 [tool.poetry.extras]
 deploy = ["gunicorn"]
@@ -80,3 +81,6 @@ omit = [
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100

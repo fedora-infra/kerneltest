@@ -1,6 +1,7 @@
 import pytest
 import responses
 
+
 @pytest.fixture
 def mocked_responses():
     with responses.RequestsMock() as rsps:
@@ -10,8 +11,5 @@ def mocked_responses():
 @pytest.fixture(autouse=True)
 def mock_oidc():
     with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
-        rsps.get(
-            "https://id.example.com/openidc/.well-known/openid-configuration", json={}
-        )
+        rsps.get("https://id.example.com/openidc/.well-known/openid-configuration", json={})
         yield
-

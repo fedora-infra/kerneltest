@@ -9,11 +9,13 @@ kerneltest producer (wsgi process).
 """
 
 import socket
-hostname = socket.gethostname().split('.')[0]
+
+hostname = socket.gethostname().split(".")[0]
 
 config = dict(
     endpoints={
-        "kerneltest.%s" % hostname: [
+        "kerneltest.%s"
+        % hostname: [
             "tcp://127.0.0.1:3005",
         ],
     },
