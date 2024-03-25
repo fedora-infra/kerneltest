@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Licensed under the terms of the GNU GPL License version 2
 
 """
@@ -9,7 +8,7 @@ Source: http://flask.pocoo.org/snippets/35/ by Peter Hansen
 """
 
 
-class ReverseProxied(object):  # pragma: no cover
+class ReverseProxied:  # pragma: no cover
     """Wrap the application in this middleware and configure the
     front-end server to add these headers, to let you quietly bind
     this to a URL other than / and to an HTTP scheme that is

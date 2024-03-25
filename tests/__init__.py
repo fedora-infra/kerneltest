@@ -1,30 +1,19 @@
 # Licensed under the terms of the GNU GPL License version 2
 
-from __future__ import print_function
 
 """
 kerneltest tests.
 """
 
 __requires__ = ["SQLAlchemy >= 0.7"]
-import pkg_resources
-
-import unittest
-import sys
 import os
+import sys
 import time
-import six
-
+import unittest
 from contextlib import contextmanager
-from flask import appcontext_pushed, g
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import scoped_session
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-import kerneltest.app as app
 import kerneltest.dbtools as dbtools
 
 # DB_PATH = 'sqlite:///:memory:'
@@ -40,11 +29,11 @@ if os.environ.get("BUILD_ID"):
         if req.status_code == 200:
             DB_PATH = req.text
             print("Using faitout at: %s" % DB_PATH)
-    except:
+    except Exception:
         pass
 
 
-class FakeFasUser(object):
+class FakeFasUser:
     """Fake FAS user used for the tests."""
 
     id = 100
@@ -126,14 +115,6 @@ class Modeltests(unittest.TestCase):
 
         self.session.rollback()
         self.session.close()
-
-        if DB_PATH.startswith("postgres"):
-            if "localhost" in DB_PATH:
-                model.drop_tables(DB_PATH, self.session.bind)
-            else:
-                db_name = DB_PATH.rsplit("/", 1)[1]
-                req = requests.get("%s/clean/%s" % (FAITOUT_URL, db_name))
-                print(req.text)
 
 
 if __name__ == "__main__":

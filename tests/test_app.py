@@ -5,23 +5,21 @@ kerneltest tests.
 """
 
 __requires__ = ["SQLAlchemy >= 0.7"]
-import pkg_resources
 
 import json
-import unittest
-import pytest
-import sys
 import os
+import sys
+import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from pathlib import Path
+
 from fedora_messaging import testing as fml_testing
-from kerneltest_messages import UploadNewV1, ReleaseNewV1, ReleaseEditV1
+from kerneltest_messages import ReleaseEditV1, ReleaseNewV1, UploadNewV1
 
 import kerneltest.app as app
-import kerneltest.dbtools as dbtools
-from tests import Modeltests, user_set, FakeFasUser, message_result
+from tests import FakeFasUser, Modeltests, message_result, user_set
 
 
 class KerneltestTests(Modeltests):
@@ -29,7 +27,7 @@ class KerneltestTests(Modeltests):
 
     def setUp(self):
         """Set up the environnment, ran before every tests."""
-        super(KerneltestTests, self).setUp()
+        super().setUp()
 
         app.APP.config["TESTING"] = True
         app.SESSION = self.session

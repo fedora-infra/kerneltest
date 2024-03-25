@@ -9,19 +9,18 @@ import urllib.parse
 from functools import wraps
 
 import flask
-import wtforms as wtf
 import flask_wtf
-from flask_wtf.file import FileRequired
-from sqlalchemy.exc import SQLAlchemyError
-import six
 import munch
-
-
+import six
+import wtforms as wtf
 from flask_oidc import OpenIDConnect
-from kerneltest_messages import UploadNewV1, ReleaseNewV1, ReleaseEditV1
+from flask_wtf.file import FileRequired
+from kerneltest_messages import ReleaseEditV1, ReleaseNewV1, UploadNewV1
+from sqlalchemy.exc import SQLAlchemyError
 
 import kerneltest.dbtools as dbtools
 import kerneltest.messaging as messaging
+import kerneltest.proxy
 
 __version__ = "1.3.0"
 
@@ -67,9 +66,6 @@ if mail_admin and not APP.debug:
 STDERR_LOG = logging.StreamHandler(sys.stderr)
 STDERR_LOG.setLevel(logging.INFO)
 APP.logger.addHandler(STDERR_LOG)
-
-
-import kerneltest.proxy
 
 APP.wsgi_app = kerneltest.proxy.ReverseProxied(APP.wsgi_app)
 
@@ -153,7 +149,7 @@ def upload_results(test_result, username, authenticated=False):
         APP.logger.error(testkver)
     except Exception as err:
         APP.logger.debug(err)
-        raise InvalidInputException("Could not parse these results")
+        raise InvalidInputException("Could not parse these results") from err
 
     if not testkver:
         raise InvalidInputException("Could not parse these results")
@@ -272,7 +268,7 @@ def allowed_file(input_file):
     # Mimetype allowed for file to upload
     allowed_types = APP.config.get("ALLOWED_MIMETYPES", [])
     APP.logger.info("input submitted with mimetype: %s" % input_file.mimetype)
-    if not input_file.mimetype in allowed_types:
+    if input_file.mimetype not in allowed_types:
         raise InvalidInputException("Invalid input submitted: %s" % input_file.mimetype)
 
 
@@ -413,7 +409,6 @@ def upload_autotest():
     """Specific endpoint for some clients to upload their results."""
     form = ApiUploadForm(meta={"csrf": False})
     httpcode = 200
-    error = False
 
     if form.validate_on_submit():
         test_result = form.test_result.data
@@ -457,15 +452,13 @@ def upload_anonymous():
     """Specific endpoint for some clients to upload their results."""
     form = UploadForm(meta={"csrf": False})
     httpcode = 200
-    error = False
 
     if form.validate_on_submit():
         test_result = form.test_result.data
         username = form.username.data
-        authenticated = False
+
         if is_authenticated():
             username = flask.g.fas_user.username
-            authenticated = True
 
         if username == "kerneltest":
             output = {

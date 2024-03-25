@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 
 # Secret key used to generate the CRSF token, thus very private!

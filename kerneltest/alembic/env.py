@@ -1,11 +1,8 @@
-from __future__ import with_statement
+import os
 from logging.config import fileConfig
 
-import os
-
 from alembic import context
-from sqlalchemy import engine_from_config, pool, event
-
+from sqlalchemy import engine_from_config, event, pool
 
 if "KERNELTEST_CONFIG" not in os.environ and os.path.exists("/etc/kerneltest/kerneltest.cfg"):
     print("Using configuration file `/etc/kerneltest/kerneltest.cfg`")
@@ -14,7 +11,6 @@ if "KERNELTEST_CONFIG" not in os.environ and os.path.exists("/etc/kerneltest/ker
 
 from kerneltest.app import APP
 from kerneltest.dbtools import BASE
-
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
