@@ -30,6 +30,7 @@ class KerneltestTests(Modeltests):
         super().setUp()
 
         app.APP.config["TESTING"] = True
+        app.APP.config["ALLOWED_MIMETYPES"] = ["application/octet-stream", "text/plain"]
         app.SESSION = self.session
         self.app = app.APP.test_client()
 
