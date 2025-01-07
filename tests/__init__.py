@@ -25,10 +25,10 @@ if os.environ.get("BUILD_ID"):
     try:
         import requests
 
-        req = requests.get("%s/new" % FAITOUT_URL)
+        req = requests.get(f"{FAITOUT_URL}/new")
         if req.status_code == 200:
             DB_PATH = req.text
-            print("Using faitout at: %s" % DB_PATH)
+            print(f"Using faitout at: {DB_PATH}")
     except Exception:
         pass
 
