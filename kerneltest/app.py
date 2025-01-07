@@ -191,7 +191,7 @@ def upload_results(test_result, username, authenticated=False):
 
         messaging.publish(msg)
 
-    filename = "%s.log" % test.testid
+    filename = f"{test.testid}.log"
     test_result.seek(0)
     test_result.save(os.path.join(logdir, filename))
 
@@ -267,9 +267,9 @@ def allowed_file(input_file):
     """
     # Mimetype allowed for file to upload
     allowed_types = APP.config.get("ALLOWED_MIMETYPES", [])
-    APP.logger.info("input submitted with mimetype: %s" % input_file.mimetype)
+    APP.logger.info(f"input submitted with mimetype: {input_file.mimetype}")
     if input_file.mimetype not in allowed_types:
-        raise InvalidInputException("Invalid input submitted: %s" % input_file.mimetype)
+        raise InvalidInputException(f"Invalid input submitted: {input_file.mimetype}")
 
 
 @APP.context_processor
@@ -349,7 +349,7 @@ def kernel(kernel):
 def logs(logid):
     """Display logs of a specific test run."""
     logdir = APP.config.get("LOG_DIR", "logs")
-    return flask.send_from_directory(logdir, "%s.log" % logid)
+    return flask.send_from_directory(logdir, f"{logid}.log")
 
 
 @APP.route("/stats")
@@ -550,7 +550,7 @@ def admin_new_release():
         )
         messaging.publish(msg)
 
-        flask.flash('Release "%s" added' % release.releasenum)
+        flask.flash(f'Release "{release.releasenum}" added')
         return flask.redirect(flask.url_for("index"))
     return flask.render_template("release_new.html", form=form, submit_text="Create release")
 
@@ -560,7 +560,7 @@ def admin_new_release():
 def admin_edit_release(relnum):
     release = dbtools.get_release(SESSION, relnum)
     if not release:
-        flask.flash("No release %s found" % relnum)
+        flask.flash(f"No release {relnum} found")
         return flask.redirect(flask.url_for("index"))
 
     form = ReleaseForm(obj=release)
@@ -576,7 +576,7 @@ def admin_edit_release(relnum):
         )
         messaging.publish(msg)
 
-        flask.flash('Release "%s" updated' % release.releasenum)
+        flask.flash(f'Release "{release.releasenum}" updated')
         return flask.redirect(flask.url_for("index"))
     return flask.render_template(
         "release_new.html", form=form, release=release, submit_text="Edit release"
