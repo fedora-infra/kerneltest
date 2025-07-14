@@ -17,10 +17,10 @@ from flask_oidc import OpenIDConnect
 from flask_wtf.file import FileRequired
 from kerneltest_messages import ReleaseEditV1, ReleaseNewV1, UploadNewV1
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import kerneltest.dbtools as dbtools
 import kerneltest.messaging as messaging
-import kerneltest.proxy
 
 __version__ = "1.3.0"
 
@@ -67,7 +67,7 @@ STDERR_LOG = logging.StreamHandler(sys.stderr)
 STDERR_LOG.setLevel(logging.INFO)
 APP.logger.addHandler(STDERR_LOG)
 
-APP.wsgi_app = kerneltest.proxy.ReverseProxied(APP.wsgi_app)
+APP.wsgi_app = ProxyFix(APP.wsgi_app, x_proto=1, x_host=1)
 
 SESSION = dbtools.create_session(APP.config["DB_URL"])
 
