@@ -14,7 +14,7 @@ jobs:
     container:
       image: fedorapython/fedora-python-tox
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Mark the directory as safe for git
         run: git config --global --add safe.directory $PWD
 
@@ -34,7 +34,7 @@ jobs:
     name: Run the Unit Tests
     container: fedorapython/fedora-python-tox:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Mark the directory as safe for git
         run: git config --global --add safe.directory $PWD
       - name: Install RPM dependencies
