@@ -3062,4 +3062,4 @@ deploy = ["gunicorn"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9.0"
-content-hash = "98cdcf139bf1b2e25f6d1ece1b2d9c28216cca2a255b0534d00024256a9c7393"
+content-hash = "f20bd9118c70ba34a3026518bcae630f1c36fd3b24d113e1a21608d891f1cc3e"
