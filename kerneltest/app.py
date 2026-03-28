@@ -148,7 +148,7 @@ def upload_results(test_result, username, authenticated=False):
         (testdate, testset, testkver, testrel, testresult, failedtests) = parseresults(test_result)
         APP.logger.error(testkver)
     except Exception as err:
-        APP.logger.debug(err)
+        APP.logger.error(err)
         raise InvalidInputException("Could not parse these results") from err
 
     if not testkver:
@@ -383,7 +383,7 @@ def upload():
             SESSION.commit()
             flask.flash("Upload successful!")
         except InvalidInputException as err:
-            APP.logger.debug(err)
+            APP.logger.error(err)
             flask.flash(str(err))
             return flask.redirect(flask.url_for("upload"))
         except SQLAlchemyError as err:
@@ -425,7 +425,7 @@ def upload_autotest():
             SESSION.commit()
             output = {"message": "Upload successful!"}
         except InvalidInputException as err:
-            APP.logger.debug(err)
+            APP.logger.error(err)
             output = {"error": "Invalid input file"}
             httpcode = 400
         except SQLAlchemyError as err:
@@ -473,7 +473,7 @@ def upload_anonymous():
             SESSION.commit()
             output = {"message": "Upload successful!"}
         except InvalidInputException as err:
-            APP.logger.debug(err)
+            APP.logger.error(err)
             output = {"error": "Invalid input file"}
             httpcode = 400
         except SQLAlchemyError as err:
