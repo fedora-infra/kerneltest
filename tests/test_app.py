@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from pathlib import Path
 
+import responses
 from fedora_messaging import testing as fml_testing
 from kerneltest_messages import ReleaseEditV1, ReleaseNewV1, UploadNewV1
 
@@ -181,6 +182,35 @@ class KerneltestTests(Modeltests):
         data = json.loads(output.data)
         exp = {"error": "Invalid input file"}
         self.assertEqual(data, exp)
+
+    def test_upload_results_bearer_token(self):
+        """Test anonymous upload endpoint with Bearer token authentication."""
+        folder = Path(__file__).parent
+        user_info = {
+            "nickname": "testuser",
+            "email": "testuser@example.com",
+            "zoneinfo": None,
+            "groups": ["signed_fpca"],
+        }
+        expected_message = UploadNewV1(message_result(tester="testuser"))
+
+        with (folder / "1.log").open("rb") as test_result:
+            data = {
+                "test_result": test_result,
+                "username": "anonymous",
+            }
+            with responses.RequestsMock() as rsps:
+                rsps.get(app.OIDC.client_secrets["userinfo_uri"], json=user_info)
+                with fml_testing.mock_sends(expected_message):
+                    output = self.app.post(
+                        "/upload/anonymous",
+                        data=data,
+                        headers={"Authorization": "Bearer valid-token"},
+                    )
+
+        self.assertEqual(output.status_code, 200)
+        data = json.loads(output.data)
+        self.assertEqual(data, {"message": "Upload successful!"})
 
     def test_upload_results_autotest(self):
         """Test the app.upload_results function for the autotest user."""

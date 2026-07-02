@@ -11,6 +11,7 @@ from functools import wraps
 import flask
 import flask_wtf
 import munch
+import requests
 import six
 import wtforms as wtf
 from flask_oidc import OpenIDConnect
@@ -72,10 +73,60 @@ APP.wsgi_app = ProxyFix(APP.wsgi_app, x_proto=1, x_host=1)
 SESSION = dbtools.create_session(APP.config["DB_URL"])
 
 
+def validate_bearer_token(token):
+    """Validate a Bearer token against the OIDC provider userinfo endpoint.
+
+    This enables CLI tools using openidc_client to authenticate via
+    Authorization: Bearer headers, rather than requiring browser-based
+    cookie authentication.
+
+    Args:
+        token: The Bearer token from the Authorization header
+
+    Returns:
+        dict with user info if valid, None if invalid/expired
+    """
+    userinfo_url = OIDC.client_secrets["userinfo_uri"]
+    try:
+        resp = requests.get(
+            userinfo_url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            try:
+                return resp.json()
+            except ValueError:
+                APP.logger.warning("Invalid JSON from userinfo endpoint")
+                return None
+    except requests.RequestException as e:
+        APP.logger.warning(f"Bearer token validation failed: {e}")
+    return None
+
+
 @APP.before_request
 def set_session():  # pragma: no-cover
     """Set the flask session as permanent."""
     flask.session.permanent = True
+
+    # Check for Bearer token authentication (used by CLI tools like kernel-tests)
+    auth_header = flask.request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer ") and not OIDC.user_loggedin:
+        token = auth_header.removeprefix("Bearer ")
+        user_info = validate_bearer_token(token)
+        if user_info:
+            flask.g.fas_user = munch.Munch(
+                {
+                    "username": user_info.get(
+                        "nickname", user_info.get("preferred_username")
+                    ),
+                    "email": user_info.get("email", ""),
+                    "timezone": user_info.get("zoneinfo"),
+                    "groups": user_info.get("groups", []),
+                    "cla_done": "signed_fpca" in (user_info.get("groups") or []),
+                }
+            )
+            return  # Bearer auth successful, skip cookie check
 
     if OIDC.user_loggedin:
         if not hasattr(flask.session, "fas_user") or not flask.session.fas_user:
