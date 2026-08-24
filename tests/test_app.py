@@ -212,6 +212,24 @@ class KerneltestTests(Modeltests):
         data = json.loads(output.data)
         self.assertEqual(data, {"message": "Upload successful!"})
 
+    def test_validate_bearer_token_retries_transient_5xx(self):
+        """validate_bearer_token retries transient 5xx from the userinfo endpoint."""
+        user_info = {
+            "nickname": "testuser",
+            "email": "testuser@example.com",
+            "zoneinfo": None,
+            "groups": ["signed_fpca"],
+        }
+        userinfo_url = app.OIDC.client_secrets["userinfo_uri"]
+        with responses.RequestsMock() as rsps:
+            rsps.add(responses.GET, userinfo_url, status=503)
+            rsps.add(responses.GET, userinfo_url, json=user_info, status=200)
+            result = app.validate_bearer_token("valid-token")
+            # Initial attempt + one retry
+            self.assertEqual(len(rsps.calls), 2)
+
+        self.assertEqual(result, user_info)
+
     def test_upload_results_autotest(self):
         """Test the app.upload_results function for the autotest user."""
         folder = Path(__file__).parent

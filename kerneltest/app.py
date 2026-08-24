@@ -17,6 +17,7 @@ import wtforms as wtf
 from flask_oidc import OpenIDConnect
 from flask_wtf.file import FileRequired
 from kerneltest_messages import ReleaseEditV1, ReleaseNewV1, UploadNewV1
+from requests.adapters import HTTPAdapter, Retry
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -73,6 +74,30 @@ APP.wsgi_app = ProxyFix(APP.wsgi_app, x_proto=1, x_host=1)
 SESSION = dbtools.create_session(APP.config["DB_URL"])
 
 
+def _build_oidc_session():
+    """Build a requests Session with retries for OIDC userinfo calls.
+
+    Retry a few times on connection errors and transient 5xx/429 responses
+    so a single blip doesn't cause a CLI upload to silently fall back to
+    anonymous.
+    """
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=("GET",),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+_OIDC_SESSION = _build_oidc_session()
+
+
 def validate_bearer_token(token):
     """Validate a Bearer token against the OIDC provider userinfo endpoint.
 
@@ -88,10 +113,10 @@ def validate_bearer_token(token):
     """
     userinfo_url = OIDC.client_secrets["userinfo_uri"]
     try:
-        resp = requests.get(
+        resp = _OIDC_SESSION.get(
             userinfo_url,
             headers={"Authorization": f"Bearer {token}"},
-            timeout=10
+            timeout=10,
         )
         if resp.status_code == 200:
             try:
@@ -117,9 +142,7 @@ def set_session():  # pragma: no-cover
         if user_info:
             flask.g.fas_user = munch.Munch(
                 {
-                    "username": user_info.get(
-                        "nickname", user_info.get("preferred_username")
-                    ),
+                    "username": user_info.get("nickname", user_info.get("preferred_username")),
                     "email": user_info.get("email", ""),
                     "timezone": user_info.get("zoneinfo"),
                     "groups": user_info.get("groups", []),
@@ -196,7 +219,7 @@ def upload_results(test_result, username, authenticated=False):
     if not os.path.exists(logdir) and not os.path.isdir(logdir):
         os.mkdir(logdir)
     try:
-        (testdate, testset, testkver, testrel, testresult, failedtests) = parseresults(test_result)
+        testdate, testset, testkver, testrel, testresult, failedtests = parseresults(test_result)
         APP.logger.error(testkver)
     except Exception as err:
         APP.logger.debug(err)
