@@ -49,6 +49,7 @@ gunicorn = ">=21.0.0"
 kerneltest-messages = "^1.0.0"
 backoff = "^2.2.1"
 fedora-messaging = "^3.5.0"
+requests = "^2.32.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.1.0"
